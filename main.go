@@ -12,10 +12,10 @@ import (
 )
 
 // Clones the repository into the given dir, just as a normal git clone does
-func cloneRepository(repoUrl string) error {
+func cloneRepository(repoUrl string, dir string) error {
 
 	// Cloned the repository onto my desktop under Devops-Node folder
-	_, err := git.PlainClone("C:/Users/aries/Desktop/Devops-Node", false, &git.CloneOptions{
+	_, err := git.PlainClone(dir, false, &git.CloneOptions{
 		URL:      repoUrl,
 		Progress: os.Stdout,
 	})
@@ -75,7 +75,7 @@ func getFileContentFromCommit(dirName, commitHash, filePath string) (string, err
 	return string(output), nil
 }
 
-func scanFileWithRegex(fileContent, regexPattern string) ([]string, error) {
+func scanFileWithRegex(fileContent string) ([]string, error) {
 	r := regexp.MustCompile(`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
 
 	matches := r.FindAllString(fileContent, -1)
@@ -108,13 +108,24 @@ func listFilesInCommit(dirName string, commitHash string) ([]string, error) {
 
 func main() {
 
+	if len(os.Args) < 2 {
+		log.Fatal("Usage: go run main.go [directory path]")
+	}
+
+	repoUrl := os.Args[1]
+
+	dir, e := os.MkdirTemp("", "example")
+	if e != nil {
+		log.Fatal(e)
+	}
+
 	// invoke method to clone the repository locally
-	err := cloneRepository("https://github.com/abhishek-pingsafe/Devops-Node")
+	err := cloneRepository(repoUrl, dir)
 	if err != nil {
 		fmt.Println("Error cloning the repository")
 	}
 
-	branches, err := getAllBranches("C:/Users/aries/Desktop/Devops-Node")
+	branches, err := getAllBranches(dir)
 
 	if err != nil {
 		fmt.Println("Error getting all the branches")
@@ -122,18 +133,18 @@ func main() {
 
 	// Below loop prints the commits that are present in their respective branches
 	for _, val := range branches {
-		switchBranch("C:/Users/aries/Desktop/Devops-Node", val)
-		commits, _ := getCommitHistory("C:/Users/aries/Desktop/Devops-Node")
+		switchBranch(dir, val)
+		commits, _ := getCommitHistory(dir)
 		for _, commit := range commits {
-			files, _ := listFilesInCommit("C:/Users/aries/Desktop/Devops-Node", commit)
+			files, _ := listFilesInCommit(dir, commit)
 			for _, file := range files {
-				fileContent, err := getFileContentFromCommit("C:/Users/aries/Desktop/Devops-Node", commit, file)
+				fileContent, err := getFileContentFromCommit(dir, commit, file)
 				if err != nil {
 					fmt.Println("Error getting file content for", file, "in commit", commit)
 					continue
 				}
 
-				matches, err := scanFileWithRegex(fileContent, "(?m)(?i)AKIA[0-9A-Z]{16}|AWS[0-9A-Z]{38}")
+				matches, err := scanFileWithRegex(fileContent)
 				if err != nil {
 					fmt.Println("Error scanning file", file, "in commit", commit)
 					continue
@@ -141,12 +152,15 @@ func main() {
 
 				if len(matches) > 0 {
 					fmt.Printf("Matches in %s for commit %s on branch %s:\n", file, commit, val)
-					fmt.Println("Aws Key: ", matches[0])
-					fmt.Println("Secrent Token: ", matches[1])
+					fmt.Println("Access Key: ", matches[0])
+					fmt.Println("Secret Token: ", matches[1])
 				}
 			}
 		}
 
 	}
+
+	// clean up temp dir
+	defer os.RemoveAll(dir)
 
 }
