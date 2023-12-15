@@ -14,7 +14,6 @@ import (
 
 type awsValidator struct{}
 
-
 // this is specific to aws
 func (a awsValidator) FindCredentials(content string, pattern string) ([]string, error) {
 	regex := regexp.MustCompile(pattern)
@@ -26,7 +25,6 @@ func (a awsValidator) FindCredentials(content string, pattern string) ([]string,
 	return matchArr, nil
 }
 
-
 // this function is specific to aws
 func (a awsValidator) ValidateCredentials(key string, token string) (error, bool) {
 
@@ -36,7 +34,6 @@ func (a awsValidator) ValidateCredentials(key string, token string) (error, bool
 
 	return nil, true
 }
-
 
 // this function can be used to validate aws credentials from a pool
 // of valid as well as invalid credentials

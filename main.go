@@ -10,7 +10,7 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
-// Clones the repository into the given dir, just as a normal git clone does
+// Clones the repository in a given dir, just as a normal git clone does
 func cloneRepository(repoUrl string, dir string) error {
 
 	_, err := git.PlainClone(dir, false, &git.CloneOptions{
@@ -25,14 +25,22 @@ func cloneRepository(repoUrl string, dir string) error {
 	return err
 }
 
+// get all the branches of the specified repository url
 func getAllBranches(dirName string) ([]string, error) {
+
+	// command to get the remote branches
 	cmd := exec.Command("git", "-C", dirName, "branch", "-r", "--format", "%(refname:short)")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
+
+	// returns []string containing branch names
 	branches := strings.Split(strings.TrimSpace(string(output)), "\n")
 	var newBranch []string
+
+	// branches were in the form remote/origin/leak
+	// hence extracted just the last part in a new array
 	for _, val := range branches {
 		parts := strings.Split(val, "/")
 		if len(parts) > 0 {
@@ -50,11 +58,13 @@ func main() {
 
 	repoUrl := os.Args[1]
 
+	// creating a temp directory
 	dir, e := os.MkdirTemp("", "example")
 	if e != nil {
 		log.Fatal(e)
 	}
 
+	// creating a folder by the name of logs to store the output
 	logsFolder := "logs"
 	logsPath := fmt.Sprintf("%s/output.txt", logsFolder) // Path to the output file
 
@@ -69,13 +79,17 @@ func main() {
 
 	defer outputFile.Close()
 
+	// using a custom logger to log the output
 	customLog := log.New(&CustomLogger{Output: outputFile}, "", 0)
 
+	// cloning the repository, this is essentially the first step
+	// of this entire project
 	err := cloneRepository(repoUrl, dir)
 	if err != nil {
 		fmt.Println("Error cloning the repository")
 	}
 
+	// get all the branches and pass them to ScanBranches() function
 	branches, err := getAllBranches(dir)
 
 	rs := NewRepoScanner(dir, customLog)

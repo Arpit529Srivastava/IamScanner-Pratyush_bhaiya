@@ -13,16 +13,19 @@ type RepoScanner struct {
 	customLog *log.Logger
 }
 
+// initializes a new RepoScanner instance.
 func NewRepoScanner(dir string, customLog *log.Logger) *RepoScanner {
 	return &RepoScanner{dir: dir, customLog: customLog}
 }
 
+// scans through a list of branches in the repository
 func (rs *RepoScanner) ScanBranches(branches []string) {
 	for _, val := range branches {
 		rs.switchAndScan(val)
 	}
 }
 
+// switches to a branch and scans its commit history and files
 func (rs *RepoScanner) switchAndScan(val string) {
 
 	wg := sync.WaitGroup{}
@@ -39,6 +42,7 @@ func (rs *RepoScanner) switchAndScan(val string) {
 	}
 }
 
+// retrieves the commit history of the current branch
 func (rs *RepoScanner) getCommitHistory() ([]string, error) {
 	cmd := exec.Command("git", "-C", rs.dir, "rev-list", "HEAD")
 	output, err := cmd.Output()
@@ -58,6 +62,7 @@ func (rs *RepoScanner) switchBranch(branchName string) error {
 	return nil
 }
 
+// fetches the content of a file in a specific commit
 func (rs *RepoScanner) getFileContentFromCommit(commitHash, filePath string) (string, error) {
 	cmd := exec.Command("git", "-C", rs.dir, "show", fmt.Sprintf("%s:%s", commitHash, filePath))
 	output, err := cmd.Output()
@@ -67,18 +72,7 @@ func (rs *RepoScanner) getFileContentFromCommit(commitHash, filePath string) (st
 	return string(output), nil
 }
 
-
-// func (rs *RepoScanner) scanFileWithRegex(fileContent string) ([]string, error) {
-// 	r := regexp.MustCompile(`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
-
-// 	matches := r.FindAllString(fileContent, -1)
-// 	var matchArr []string
-// 	for _, match := range matches {
-// 		matchArr = regexp.MustCompile(`[^\S]+`).Split(match, 2)
-// 	}
-// 	return matchArr, nil
-// }
-
+// lists all files in a specific commit
 func (rs *RepoScanner) listFilesInCommit(commitHash string) ([]string, error) {
 	cmd := exec.Command("git", "-C", rs.dir, "ls-tree", "-r", commitHash)
 	output, err := cmd.Output()
@@ -98,6 +92,7 @@ func (rs *RepoScanner) listFilesInCommit(commitHash string) ([]string, error) {
 	return files, nil
 }
 
+// scans the content of a file in a commit for AWS credentials and logs any matches
 func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
@@ -108,7 +103,7 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.Wai
 		return
 	}
 	validator := awsValidator{}
-	matches, err := validator.FindCredentials(fileContent,`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
+	matches, err := validator.FindCredentials(fileContent, `(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
 	if err != nil {
 		fmt.Println("Error scanning file", file, "in commit", commit)
 		return
