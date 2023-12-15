@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 type RepoScanner struct {
@@ -21,25 +22,24 @@ func (rs *RepoScanner) ScanBranches(branches []string) {
 	// var wg sync.WaitGroup
 
 	for _, val := range branches {
-		// wg.Add(1)
-
-		// go func(val string) {
-		// defer wg.Done()
 		rs.switchAndScan(val)
-		// }(val)
 	}
 
-	// wg.Wait()
 }
 
 func (rs *RepoScanner) switchAndScan(val string) {
+
+	wg := sync.WaitGroup{}
+
 	rs.switchBranch(val)
 	commits, _ := rs.getCommitHistory()
 	for _, commit := range commits {
 		files, _ := rs.listFilesInCommit(commit)
 		for _, file := range files {
-			rs.scanFileContent(val, commit, file)
+			wg.Add(1)
+			go rs.scanFileContent(val, commit, file, &wg)
 		}
+		wg.Wait()
 	}
 }
 
@@ -101,7 +101,10 @@ func (rs *RepoScanner) listFilesInCommit(commitHash string) ([]string, error) {
 	return files, nil
 }
 
-func (rs *RepoScanner) scanFileContent(branch, commit, file string) {
+func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
 	fileContent, err := rs.getFileContentFromCommit(commit, file)
 	if err != nil {
 		fmt.Println("Error getting file content for", file, "in commit", commit)
@@ -115,6 +118,9 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string) {
 	}
 
 	if len(matches) > 0 {
+
+		log.Println("LOGGED ",branch)
+
 		rs.customLog.Println("Branch: ", branch)
 		rs.customLog.Println("\t File: ", file, "Commit: ", commit)
 		rs.customLog.Println("\t Access Key: ", matches[0])
