@@ -14,7 +14,6 @@ import (
 // Clones the repository into the given dir, just as a normal git clone does
 func cloneRepository(repoUrl string, dir string) error {
 
-	// Cloned the repository onto my desktop under Devops-Node folder
 	_, err := git.PlainClone(dir, false, &git.CloneOptions{
 		URL:      repoUrl,
 		Progress: os.Stdout,
@@ -27,7 +26,6 @@ func cloneRepository(repoUrl string, dir string) error {
 	return err
 }
 
-// function to fetch the commit history
 func getCommitHistory(dirName string) ([]string, error) {
 
 	// creates a command to execute the Git command-line tool
@@ -38,7 +36,6 @@ func getCommitHistory(dirName string) ([]string, error) {
 	return commits, err
 }
 
-// function to fetch all of the branches
 func getAllBranches(dirName string) ([]string, error) {
 	cmd := exec.Command("git", "-C", dirName, "branch", "-r", "--format", "%(refname:short)")
 	output, err := cmd.Output()
@@ -65,7 +62,6 @@ func switchBranch(dirName, branchName string) error {
 	return nil
 }
 
-// Gets the content of a file from a specific commit
 func getFileContentFromCommit(dirName, commitHash, filePath string) (string, error) {
 	cmd := exec.Command("git", "-C", dirName, "show", fmt.Sprintf("%s:%s", commitHash, filePath))
 	output, err := cmd.Output()
@@ -86,7 +82,6 @@ func scanFileWithRegex(fileContent string) ([]string, error) {
 	return matchArr, nil
 }
 
-// Lists all files and directories in a given commit
 func listFilesInCommit(dirName string, commitHash string) ([]string, error) {
 	cmd := exec.Command("git", "-C", dirName, "ls-tree", "-r", commitHash)
 	output, err := cmd.Output()
@@ -109,7 +104,7 @@ func listFilesInCommit(dirName string, commitHash string) ([]string, error) {
 func main() {
 
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: go run main.go [directory path]")
+		log.Fatal("Usage: go run main.go [repository path]")
 	}
 
 	repoUrl := os.Args[1]
@@ -119,7 +114,22 @@ func main() {
 		log.Fatal(e)
 	}
 
-	// invoke method to clone the repository locally
+	logsFolder := "logs"
+	logsPath := fmt.Sprintf("%s/output.txt", logsFolder) // Path to the output file
+
+	if _, e := os.Stat(logsFolder); os.IsNotExist(e) {
+		os.Mkdir(logsFolder, 0755)
+	}
+
+	outputFile, outputErr := os.OpenFile(logsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if outputErr != nil {
+		log.Fatal(outputErr)
+	}
+
+	defer outputFile.Close()
+
+	customLog := log.New(&CustomLogger{Output: outputFile}, "", 0)
+
 	err := cloneRepository(repoUrl, dir)
 	if err != nil {
 		fmt.Println("Error cloning the repository")
@@ -131,7 +141,6 @@ func main() {
 		fmt.Println("Error getting all the branches")
 	}
 
-	// Below loop prints the commits that are present in their respective branches
 	for _, val := range branches {
 		switchBranch(dir, val)
 		commits, _ := getCommitHistory(dir)
@@ -151,9 +160,10 @@ func main() {
 				}
 
 				if len(matches) > 0 {
-					fmt.Printf("Matches in %s for commit %s on branch %s:\n", file, commit, val)
-					fmt.Println("Access Key: ", matches[0])
-					fmt.Println("Secret Token: ", matches[1])
+					customLog.Println("Branch: ", val)
+					customLog.Println("\t File: ", file, "Commit: ", commit)
+					customLog.Println("\t Access Key: ", matches[0])
+					customLog.Println("\t Secret Token: ", matches[1])
 				}
 			}
 		}
