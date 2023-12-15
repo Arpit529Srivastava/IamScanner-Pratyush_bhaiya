@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/go-git/go-git/v5"
 )
@@ -80,10 +79,7 @@ func main() {
 	branches, err := getAllBranches(dir)
 
 	rs := NewRepoScanner(dir, customLog)
-
-	start := time.Now()
 	rs.ScanBranches(branches)
-	fmt.Println("TOOK ",time.Since(start))
 
 	if err != nil {
 		fmt.Println("Error getting all the branches")

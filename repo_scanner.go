@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"regexp"
 	"strings"
 	"sync"
 )
@@ -19,12 +18,9 @@ func NewRepoScanner(dir string, customLog *log.Logger) *RepoScanner {
 }
 
 func (rs *RepoScanner) ScanBranches(branches []string) {
-	// var wg sync.WaitGroup
-
 	for _, val := range branches {
 		rs.switchAndScan(val)
 	}
-
 }
 
 func (rs *RepoScanner) switchAndScan(val string) {
@@ -71,16 +67,17 @@ func (rs *RepoScanner) getFileContentFromCommit(commitHash, filePath string) (st
 	return string(output), nil
 }
 
-func (rs *RepoScanner) scanFileWithRegex(fileContent string) ([]string, error) {
-	r := regexp.MustCompile(`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
 
-	matches := r.FindAllString(fileContent, -1)
-	var matchArr []string
-	for _, match := range matches {
-		matchArr = regexp.MustCompile(`[^\S]+`).Split(match, 2)
-	}
-	return matchArr, nil
-}
+// func (rs *RepoScanner) scanFileWithRegex(fileContent string) ([]string, error) {
+// 	r := regexp.MustCompile(`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
+
+// 	matches := r.FindAllString(fileContent, -1)
+// 	var matchArr []string
+// 	for _, match := range matches {
+// 		matchArr = regexp.MustCompile(`[^\S]+`).Split(match, 2)
+// 	}
+// 	return matchArr, nil
+// }
 
 func (rs *RepoScanner) listFilesInCommit(commitHash string) ([]string, error) {
 	cmd := exec.Command("git", "-C", rs.dir, "ls-tree", "-r", commitHash)
@@ -110,17 +107,14 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.Wai
 		fmt.Println("Error getting file content for", file, "in commit", commit)
 		return
 	}
-
-	matches, err := rs.scanFileWithRegex(fileContent)
+	validator := awsValidator{}
+	matches, err := validator.FindCredentials(fileContent,`(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
 	if err != nil {
 		fmt.Println("Error scanning file", file, "in commit", commit)
 		return
 	}
 
 	if len(matches) > 0 {
-
-		log.Println("LOGGED ",branch)
-
 		rs.customLog.Println("Branch: ", branch)
 		rs.customLog.Println("\t File: ", file, "Commit: ", commit)
 		rs.customLog.Println("\t Access Key: ", matches[0])
