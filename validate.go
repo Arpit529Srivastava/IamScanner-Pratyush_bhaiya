@@ -12,6 +12,7 @@ import (
 
 // this function can be used to validate aws credentials from a pool
 // of valid as well as invalid credentials
+// this is specific to aws
 func ValidateAWSCredentials(accessKey, secretToken string) error {
 	// Create a new AWS session
 	sess, _ := session.NewSession(&aws.Config{
