@@ -103,7 +103,7 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.Wai
 		return
 	}
 	validator := awsValidator{}
-	matches, err := validator.FindCredentials(fileContent, `(?m)(?i)AKIA[0-9A-Z]{16}\s+\S{40}|AWS[0-9A-Z]{38}\s+?\S{40}`)
+	matches, err := validator.FindCredentials(fileContent)
 	if err != nil {
 		fmt.Println("Error scanning file", file, "in commit", commit)
 		return
@@ -112,7 +112,11 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.Wai
 	if len(matches) > 0 {
 		rs.customLog.Println("Branch: ", branch)
 		rs.customLog.Println("\t File: ", file, "Commit: ", commit)
-		rs.customLog.Println("\t Access Key: ", matches[0])
-		rs.customLog.Println("\t Secret Token: ", matches[1])
+
+		for _, val := range matches {
+			rs.customLog.Println("\t Access Key: ", val.Id)
+			rs.customLog.Println("\t Secret Token: ", val.Token)
+
+		}
 	}
 }
