@@ -53,7 +53,7 @@ func getAllBranches(dirName string) ([]string, error) {
 func main() {
 
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: go run main.go [repository path]")
+		log.Fatal("Usage: go run . [repository path]")
 	}
 
 	repoUrl := os.Args[1]
@@ -91,13 +91,13 @@ func main() {
 
 	// get all the branches and pass them to ScanBranches() function
 	branches, err := getAllBranches(dir)
+	if err != nil {
+		fmt.Println("Error getting all the branches")
+	}
 
 	rs := NewRepoScanner(dir, customLog)
 	rs.ScanBranches(branches)
 
-	if err != nil {
-		fmt.Println("Error getting all the branches")
-	}
 
 	// clean up temp dir
 	defer os.RemoveAll(dir)

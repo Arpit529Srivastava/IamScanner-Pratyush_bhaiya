@@ -114,9 +114,18 @@ func (rs *RepoScanner) scanFileContent(branch, commit, file string, wg *sync.Wai
 		rs.customLog.Println("\t File: ", file, "Commit: ", commit)
 
 		for _, val := range matches {
+
+			// This condition was supposed to validate the credentials but it
+			// seems that the credentials have been expired and I get InvalidClientTokenId
+			// for all of the access & secret tokens
+			// if ValidateAwsCredentials(val.Id, val.Token) {
+			// 	rs.customLog.Println("\t Access Key: ", val.Id)
+			// 	rs.customLog.Println("\t Secret Token: ", val.Token)
+			// }
+
+			// Just printing all of the credentials which are valid as well as invalid
 			rs.customLog.Println("\t Access Key: ", val.Id)
 			rs.customLog.Println("\t Secret Token: ", val.Token)
-
 		}
 	}
 }
